@@ -14,7 +14,7 @@ export default defineConfig({
     runtimeErrorOverlay(),
     glsl(),
   ],
-  base: "/",
+  base: "/BR1/",
   server: {
     host: "0.0.0.0",
     port: 5000,
