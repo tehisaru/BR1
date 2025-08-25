@@ -231,7 +231,8 @@ const BoardCell: React.FC<BoardCellProps> = ({
                   const size = 2 + Math.random() * 6;
                   
                   // Get player's color with variations using the new helper function
-                  const { r, g, b } = createColorVariation(cell.player!, 0.6); // Higher variation for more variety
+                  const colorVariation = cell.player ? createColorVariation(cell.player, 0.6) : { r: 255, g: 255, b: 255 };
+                  const { r, g, b } = colorVariation;
                   
                   // Start from edge of circle, not center
                   const startRadius = 30; // Start from edge of HQ base
