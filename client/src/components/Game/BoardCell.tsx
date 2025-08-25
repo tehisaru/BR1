@@ -325,22 +325,9 @@ const BoardCell: React.FC<BoardCellProps> = ({
               const distance = 50 + Math.random() * 210; // Much farther spread
               const size = 2 + Math.random() * 7;
               
-              // Get player's base color and create variations
-              const playerColor = PLAYER_COLORS[cell.player!];
-              const colorMatch = playerColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-              let r = 255, g = 255, b = 255; // Default to white if parse fails
-              
-              if (colorMatch) {
-                r = parseInt(colorMatch[1]);
-                g = parseInt(colorMatch[2]);
-                b = parseInt(colorMatch[3]);
-                
-                // Create color variations - lighter and darker shades of player color
-                const variation = (Math.random() - 0.5) * 0.6; // -0.3 to 0.3
-                r = Math.max(0, Math.min(255, Math.round(r + r * variation)));
-                g = Math.max(0, Math.min(255, Math.round(g + g * variation)));
-                b = Math.max(0, Math.min(255, Math.round(b + b * variation)));
-              }
+              // Get player's color with variations using the safe helper function
+              const colorVariation = cell.player ? createColorVariation(cell.player, 0.6) : { r: 255, g: 255, b: 255 };
+              const { r, g, b } = colorVariation;
 
               // Start from edge of circle, not center
               const startRadius = 30; // Start from edge of HQ base
