@@ -47,7 +47,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   useEffect(() => {
     const calculateScale = () => {
       const boardWidth = cols * CELL_SIZE + cols * 2 + 24;
-      const boardHeight = (rows * CELL_SIZE + rows * 2 + 24) * 1.2;
+      const boardHeight = (rows * CELL_SIZE + rows * 2 + 24) * 1.017;
       
       const availableWidth = window.innerWidth - 32; // Account for padding
       const availableHeight = window.innerHeight - 200; // Account for UI elements
@@ -132,7 +132,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         variants={boardContainerVariants}
         style={{ 
           width: cols * CELL_SIZE + cols * 2 + 24,
-          height: (rows * CELL_SIZE + rows * 2 + 24) * 1.2,
+          height: (rows * CELL_SIZE + rows * 2 + 24) * 1.017,
           background: "rgba(255, 255, 255, 0.05)",
           border: "none",
           boxShadow: "0 0 40px rgba(255, 255, 255, 0.3)",
