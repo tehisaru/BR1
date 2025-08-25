@@ -1,17 +1,19 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Chain Reaction Game</title>
+  <title>Base Reaction</title>
   <script type="text/javascript">
-    var segmentCount = 0;
+    // GitHub Pages SPA redirect
+    // This script takes the current URL and redirects to the root with the path as a query parameter
+    var pathSegmentsToKeep = 1; // Change this if your site is in a subdirectory
+    
     var l = window.location;
     l.replace(
       l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-      '/?p=/' +
-      l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
-      (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+      l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+      l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+      (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
       l.hash
     );
   </script>
