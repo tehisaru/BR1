@@ -18,6 +18,27 @@ export const PLAYER_COLORS = {
   [PLAYER.ORANGE]: "rgb(255, 115, 0)"  // Violet purple
 };
 
+// RGB values for direct manipulation without parsing
+export const PLAYER_RGB_VALUES = {
+  [PLAYER.BLUE]: { r: 55, g: 114, b: 255 },
+  [PLAYER.RED]: { r: 223, g: 41, b: 53 },
+  [PLAYER.BLACK]: { r: 8, g: 7, b: 8 },
+  [PLAYER.ORANGE]: { r: 255, g: 115, b: 0 }
+};
+
+// Helper function to create color variations
+export const createColorVariation = (player: PLAYER, variationAmount = 0.3): { r: number, g: number, b: number } => {
+  const baseColor = PLAYER_RGB_VALUES[player];
+  if (!baseColor) return { r: 255, g: 255, b: 255 }; // Fallback to white
+  
+  const variation = (Math.random() - 0.5) * variationAmount; // -0.15 to 0.15 by default
+  const r = Math.max(0, Math.min(255, Math.round(baseColor.r + baseColor.r * variation)));
+  const g = Math.max(0, Math.min(255, Math.round(baseColor.g + baseColor.g * variation)));
+  const b = Math.max(0, Math.min(255, Math.round(baseColor.b + baseColor.b * variation)));
+  
+  return { r, g, b };
+};
+
 export const PLAYER_BG_COLORS = {
   [PLAYER.BLUE]: "rgb(13, 27, 64)",    // Darker royal blue
   [PLAYER.RED]: "rgb(56, 10, 13)",     // Darker bright red

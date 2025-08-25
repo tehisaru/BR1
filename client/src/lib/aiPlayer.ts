@@ -168,19 +168,23 @@ const evaluateStrategicMove = (
   const cell = grid[row][col];
   const criticalMass = calculateCriticalMass(row, col, rows, cols);
 
-  // 1. POWER-UP SCORING - Only in Base Mode (no power-ups in chain reaction)
+  // 1. POWER-UP SCORING - COMPLETELY OVERHAULED for actual power-up chasing
   if (gameState.isBaseMode && gameState.powerUps) {
     const powerUpAtPosition = gameState.powerUps.find(pu => pu.row === row && pu.col === col);
     if (powerUpAtPosition) {
-        // Power-ups are MASSIVELY valuable - AI should prioritize these above almost everything
-        evaluation.powerUpScore = powerUpAtPosition.type === 'diamond' ? 1000 : 1000; // MASSIVE values
+        // Power-ups are THE HIGHEST PRIORITY - should override almost all other considerations
+        evaluation.powerUpScore = 5000; // EXTREMELY MASSIVE values - higher than anything else
+        console.log(`🎯 AI found power-up at (${row},${col}) - PRIORITY MOVE! Score: 5000`);
     }
 
-    // Extremely strong bonus for being near power-ups - AI should chase them obsessively
+    // VERY strong bonus for being near power-ups with clear path
     gameState.powerUps.forEach(powerUp => {
       const distanceToPowerUp = Math.abs(powerUp.row - row) + Math.abs(powerUp.col - col);
-      if (distanceToPowerUp <= 4) {
-        evaluation.powerUpScore += (5 - distanceToPowerUp) * 100; // MUCH stronger proximity bonus
+      if (distanceToPowerUp <= 3) {
+        // Much higher proximity bonus and scale with distance
+        const proximityBonus = (4 - distanceToPowerUp) * 500; // 500, 1000, 1500, 2000 based on distance
+        evaluation.powerUpScore += proximityBonus;
+        console.log(`🎯 AI evaluating move near power-up (${powerUp.row},${powerUp.col}). Distance: ${distanceToPowerUp}, Bonus: ${proximityBonus}`);
       }
     });
   }
@@ -242,22 +246,61 @@ const evaluateStrategicMove = (
     }
   }
 
-  // 3. AGGRESSIVE SCORING - Prioritize moves that capture enemy territory
+  // 3. IMMEDIATE DAMAGE SCORING - HIGHEST PRIORITY for moves that can damage RIGHT NOW
+  let immediateExplosionBonus = 0;
   let enemyCaptureCount = 0;
   let enemyProximityScore = 0;
   
-  // Check how many enemy cells this move would affect if it explodes
+  // Check if this move will cause an immediate explosion (CRITICAL for damage timing)
   if (cell.atoms + 1 >= criticalMass) {
+    console.log(`💥 AI evaluating IMMEDIATE EXPLOSION at (${row},${col}) - atoms will be ${cell.atoms + 1}/${criticalMass}`);
     const neighbors = getNeighborsForAI(row, col, rows, cols);
+    
     neighbors.forEach(({nr, nc}) => {
       const neighborCell = grid[nr][nc];
       if (neighborCell.player && neighborCell.player !== currentPlayer) {
-        enemyCaptureCount += neighborCell.atoms + 1; // Potential atoms to capture
-        evaluation.aggressiveScore += 15 * neighborCell.atoms; // More atoms = higher value
+        enemyCaptureCount += neighborCell.atoms + 1;
+        // MASSIVE bonus for immediate enemy damage - this should be prioritized!
+        const immediateDamage = neighborCell.atoms * 100; // Much higher than before
+        evaluation.aggressiveScore += immediateDamage;
+        immediateExplosionBonus += 1000; // Huge bonus for ANY immediate explosion that hits enemies
+        console.log(`💥 IMMEDIATE ENEMY DAMAGE at neighbor (${nr},${nc}) - atoms: ${neighborCell.atoms}, damage bonus: ${immediateDamage}`);
       }
     });
+    
+    // Additional bonus just for exploding (creates pressure)
+    immediateExplosionBonus += 200;
   }
+  
+  evaluation.aggressiveScore += immediateExplosionBonus;
 
+  // SMART PLACEMENT STRATEGY - avoid enemy cells, prefer strategic timing
+  let placementStrategyScore = 0;
+  
+  // PENALTY for placing on cells that already have enemy presence nearby
+  if (cell.player && cell.player !== currentPlayer) {
+    placementStrategyScore -= 300; // Strong penalty for placing on enemy cells
+    console.log(`⚠️ AI penalizing placement on enemy cell at (${row},${col})`);
+  }
+  
+  // BONUS for strategic timing - prefer moves that will explode BEFORE nearby enemies can
+  const neighbors = getNeighborsForAI(row, col, rows, cols);
+  neighbors.forEach(({nr, nc}) => {
+    const neighborCell = grid[nr][nc];
+    if (neighborCell.player && neighborCell.player !== currentPlayer) {
+      const neighborCriticalMass = calculateCriticalMass(nr, nc, rows, cols);
+      const ourTimeToExplode = criticalMass - (cell.atoms + 1); // How many more atoms we need
+      const enemyTimeToExplode = neighborCriticalMass - neighborCell.atoms; // How many more atoms they need
+      
+      if (ourTimeToExplode <= enemyTimeToExplode && ourTimeToExplode >= 0) {
+        // We can explode before or at the same time as the enemy - GOOD!
+        const timingBonus = (enemyTimeToExplode - ourTimeToExplode + 1) * 150;
+        placementStrategyScore += timingBonus;
+        console.log(`⏱️ STRATEGIC TIMING at (${row},${col}): We explode in ${ourTimeToExplode}, enemy at (${nr},${nc}) explodes in ${enemyTimeToExplode}. Bonus: ${timingBonus}`);
+      }
+    }
+  });
+  
   // Check proximity to enemy positions for future aggressive moves (only in base mode)
   if (gameState.isBaseMode) {
     for (let r = Math.max(0, row - 2); r <= Math.min(rows - 1, row + 2); r++) {
@@ -265,12 +308,13 @@ const evaluateStrategicMove = (
         const targetCell = grid[r][c];
         if (targetCell.player && targetCell.player !== currentPlayer) {
           const distance = Math.abs(r - row) + Math.abs(c - col);
-          enemyProximityScore += (3 - distance) * targetCell.atoms * 2; // Proximity bonus for base mode
+          enemyProximityScore += (3 - distance) * targetCell.atoms * 2;
         }
       }
     }
   }
-  evaluation.aggressiveScore += enemyProximityScore;
+  
+  evaluation.aggressiveScore += enemyProximityScore + placementStrategyScore;
 
   // 4. BASE THREAT SCORING - Prioritize moves that threaten enemy bases, ESPECIALLY chosen target
   if (gameState.isBaseMode && gameState.hqs) {
@@ -491,14 +535,22 @@ class PersonalityBasedAI {
     // Calculate base score with personality-influenced priorities
     let baseScore = 0;
     
-    // Apply personality traits to scoring with massive power-up emphasis
-    baseScore += evaluation.powerUpScore * personality.powerUpHunting * 3.0; // MASSIVE power-up multiplier
-    baseScore += evaluation.territoryScore * personality.territorialness * personality.cornerPreference * 0.8;
+    // Apply personality traits with FIXED power-up prioritization
+    const powerUpMultiplier = Math.max(1.0, personality.powerUpHunting); // Ensure power-ups are NEVER ignored
+    baseScore += evaluation.powerUpScore * powerUpMultiplier; // Direct application - no dilution!
+    
+    // Log power-up scoring for debugging
+    if (evaluation.powerUpScore > 0) {
+      console.log(`🎯 AI (${currentPlayer}) power-up scoring: base=${evaluation.powerUpScore}, personality=${personality.powerUpHunting}, final=${evaluation.powerUpScore * powerUpMultiplier}`);
+    }
+    
+    // Other scoring with more balanced weights
+    baseScore += evaluation.aggressiveScore * personality.aggressiveness * 2.5; // HIGHER weight for immediate damage
+    baseScore += evaluation.baseThreatScore * personality.aggressiveness * personality.baseHuntingThirst * 2.0;
     baseScore += evaluation.defensiveScore * personality.defensiveness * 2.0;
-    baseScore += evaluation.aggressiveScore * personality.aggressiveness * 1.5;
-    baseScore += evaluation.baseThreatScore * personality.aggressiveness * personality.baseHuntingThirst * 2.0; // Focus on chosen enemy
+    baseScore += evaluation.territoryScore * personality.territorialness * personality.cornerPreference * 0.5; // LOWER territory weight
     baseScore += evaluation.chainReactionScore * personality.baseHuntingThirst * 1.3;
-    baseScore += targetEnemyBonus; // Extra focus on chosen target
+    baseScore += targetEnemyBonus;
     
     // Add significant randomness based on base-hunting personality
     const baseRandomness = personality.baseHuntingThirst * 0.3; // 0.06-0.9

@@ -4,7 +4,8 @@ import {
   CELL_SIZE, 
   DOT_SIZE, 
   PLAYER_COLORS, 
-  ANIMATION_DURATION 
+  ANIMATION_DURATION,
+  createColorVariation 
 } from "../../lib/constants";
 import { 
   getDotPositions, 
@@ -223,12 +224,14 @@ const BoardCell: React.FC<BoardCellProps> = ({
                   }}
                 />
                 
-                {/* 100 gray particles exploding in all directions from whole circle */}
+                {/* 100 colorful particles exploding in all directions from whole circle */}
                 {Array.from({ length: 100 }).map((_, i) => {
                   const angle = (i * 360) / 100 + Math.random() * 5; // Even distribution with slight randomness
                   const distance = 50 + Math.random() * 110; // Much farther spread
                   const size = 2 + Math.random() * 6;
-                  const grayShade = 100 + Math.random() * 100; // Different shades of gray
+                  
+                  // Get player's color with variations using the new helper function
+                  const { r, g, b } = createColorVariation(cell.player!, 0.6); // Higher variation for more variety
                   
                   // Start from edge of circle, not center
                   const startRadius = 30; // Start from edge of HQ base
@@ -264,7 +267,7 @@ const BoardCell: React.FC<BoardCellProps> = ({
                       style={{
                         width: size,
                         height: size,
-                        backgroundColor: `rgb(${grayShade}, ${grayShade}, ${grayShade})`,
+                        backgroundColor: `rgb(${r}, ${g}, ${b})`,
                         left: '50%',
                         top: '50%'
                       }}
