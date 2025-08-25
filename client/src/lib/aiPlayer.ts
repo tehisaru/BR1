@@ -455,14 +455,15 @@ function generateAIPersonality(): AIPersonality {
   const possibleEnemies = [PLAYER.RED, PLAYER.BLUE, PLAYER.ORANGE, PLAYER.BLACK];
   const targetEnemy = possibleEnemies[Math.floor(Math.random() * possibleEnemies.length)];
   
+  // Make ALL AI more baseline aggressive while keeping variety
   return {
-    aggressiveness: 0.2 + Math.random() * 2.3,      // 0.2-2.5 (MUCH MORE EXTREME)
-    defensiveness: 0.2 + Math.random() * 2.3,       // 0.2-2.5 (MUCH MORE EXTREME)
-    baseHuntingThirst: 0.2 + Math.random() * 2.8,   // 0.2-3.0 (EXTREMELY HIGH base hunting)
-    powerUpHunting: 0.8 + Math.random() * 2.2,      // 0.8-3.0 (Very high power-up chasing)
-    territorialness: 0.2 + Math.random() * 2.3,     // 0.2-2.5 (MUCH MORE EXTREME)
-    cornerPreference: 0.1 + Math.random() * 1.9,    // 0.1-2.0 (MUCH MORE EXTREME, can be very low)
-    spreadTendency: 0.2 + Math.random() * 2.3,      // 0.2-2.5 (MUCH MORE EXTREME)
+    aggressiveness: 1.2 + Math.random() * 1.8,      // 1.2-3.0 (MUCH more aggressive baseline)
+    defensiveness: 0.8 + Math.random() * 2.2,       // 0.8-3.0 (defensive when needed)
+    baseHuntingThirst: 1.0 + Math.random() * 2.0,   // 1.0-3.0 (always some base hunting)
+    powerUpHunting: 2.5 + Math.random() * 0.5,      // 2.5-3.0 (ALWAYS prioritize power-ups)
+    territorialness: 0.8 + Math.random() * 1.7,     // 0.8-2.5 (reasonable territory interest)
+    cornerPreference: 0.3 + Math.random() * 1.2,    // 0.3-1.5 (moderate corner preference)
+    spreadTendency: 1.0 + Math.random() * 1.5,      // 1.0-2.5 (prefer aggressive spreading)
     targetEnemy: targetEnemy                        // Random enemy to focus on
   };
 }
@@ -482,14 +483,16 @@ class PersonalityBasedAI {
       personality.targetEnemy = possibleEnemies[Math.floor(Math.random() * possibleEnemies.length)];
       
       this.personalities.set(player, personality);
-      console.log(`🎭 Generated new personality for ${player}:`, this.personalities.get(player));
+      console.log(`🎭 Generated FRESH personality for ${player}: aggr=${personality.aggressiveness.toFixed(1)}, def=${personality.defensiveness.toFixed(1)}, powerUp=${personality.powerUpHunting.toFixed(1)}, target=${personality.targetEnemy}`);
     }
     return this.personalities.get(player)!;
   }
 
   // Reset personalities for new game
   resetPersonalities(): void {
+    const oldCount = this.personalities.size;
     this.personalities.clear();
+    console.log(`🔄 Cleared ${oldCount} AI personalities. Fresh personalities will be generated.`);
   }
 
   evaluateMove(
@@ -652,27 +655,61 @@ class PersonalityBasedAI {
       return null;
     }
 
-    // Use minimax for deeper analysis on important moves
+    // FIRST: Check for direct power-up moves - these get ABSOLUTE PRIORITY
+    if (isBaseMode && powerUps) {
+      for (const move of validMoves) {
+        const powerUpAtPosition = powerUps.find(pu => pu.row === move.row && pu.col === move.col);
+        if (powerUpAtPosition) {
+          console.log(`🎯 POWER-UP PRIORITY! AI ${currentPlayer} found power-up at (${move.row},${move.col}) - selecting immediately!`);
+          return { ...move, score: 10000 }; // Highest possible score
+        }
+      }
+    }
+
+    // SECOND: Use direct evaluation (not minimax) to get true scores
     for (const move of validMoves) {
-      const simGrid = this.simulateMove(grid, move.row, move.col, currentPlayer);
-      move.score = this.minimax(simGrid, 3, false, -Infinity, Infinity, this.getNextPlayer(currentPlayer), gameState);
-      
-      // Add personality-based randomness
-      const randomFactor = (Math.random() - 0.5) * 50 * personality.baseHuntingThirst;
-      move.score += randomFactor;
+      move.score = this.evaluateMove(grid, move.row, move.col, currentPlayer, gameState);
     }
 
     // Sort moves by score (highest first)
     validMoves.sort((a, b) => b.score - a.score);
 
-    // Use personality to determine move selection randomness
-    const selectionRandomness = personality.baseHuntingThirst * 0.3; // 0.06-0.9
-    const topMoves = Math.max(1, Math.ceil(validMoves.length * (0.1 + selectionRandomness)));
-    const bestMoveIndex = Math.floor(Math.random() * Math.min(topMoves, validMoves.length));
+    // THIRD: Enhanced defensive check - if enemy very close to our base, prioritize defense
+    if (isBaseMode && hqs) {
+      const ourHQ = hqs.find(hq => hq.player === currentPlayer);
+      if (ourHQ) {
+        let criticalThreat = false;
+        for (let r = Math.max(0, ourHQ.row - 2); r <= Math.min(grid.length - 1, ourHQ.row + 2); r++) {
+          for (let c = Math.max(0, ourHQ.col - 2); c <= Math.min(grid[0].length - 1, ourHQ.col + 2); c++) {
+            const threatCell = grid[r][c];
+            if (threatCell.player && threatCell.player !== currentPlayer && threatCell.atoms >= 2) {
+              criticalThreat = true;
+              console.log(`⚠️ CRITICAL THREAT detected near base at (${r},${c}) with ${threatCell.atoms} atoms!`);
+              break;
+            }
+          }
+          if (criticalThreat) break;
+        }
+        
+        if (criticalThreat) {
+          // Re-sort with heavy defensive weighting when under threat
+          validMoves.forEach(move => {
+            const distanceToHQ = Math.abs(move.row - ourHQ.row) + Math.abs(move.col - ourHQ.col);
+            if (distanceToHQ <= 2) {
+              move.score += 2000; // Massive defensive bonus
+            }
+          });
+          validMoves.sort((a, b) => b.score - a.score);
+        }
+      }
+    }
 
+    // Select from top moves with some randomness
+    const topMoveCount = Math.max(1, Math.min(3, validMoves.length)); // Always consider top 1-3 moves
+    const bestMoveIndex = Math.floor(Math.random() * topMoveCount);
     const bestMove = validMoves[bestMoveIndex];
     
-    console.log(`🎭 AI ${currentPlayer} (aggr:${personality.aggressiveness.toFixed(1)}, def:${personality.defensiveness.toFixed(1)}, baseHunt:${personality.baseHuntingThirst.toFixed(1)}, target:${personality.targetEnemy}) chose (${bestMove.row},${bestMove.col}) with minimax score ${bestMove.score.toFixed(1)}`);
+    console.log(`🎭 AI ${currentPlayer} (aggr:${personality.aggressiveness.toFixed(1)}, def:${personality.defensiveness.toFixed(1)}, powerUp:${personality.powerUpHunting.toFixed(1)}) chose (${bestMove.row},${bestMove.col}) with score ${bestMove.score.toFixed(1)}`);
     
     return bestMove;
   }
@@ -683,6 +720,7 @@ const personalityAI = new PersonalityBasedAI();
 
 // Function to reset AI personalities for new games
 export const resetAIPersonalities = () => {
+  console.log('🔄 RESETTING ALL AI PERSONALITIES - fresh game starting!');
   personalityAI.resetPersonalities();
 };
 
