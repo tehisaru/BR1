@@ -922,7 +922,12 @@ export const useChainReaction = create<ChainReactionState>((set, get) => ({
             }
 
             // Process the next explosion in the queue
-            const {r, c} = explosionQueue.shift()!;
+            const nextExplosion = explosionQueue.shift();
+            if (!nextExplosion) {
+              console.warn("⚠️  Explosion queue is unexpectedly empty, ending chain reaction");
+              return;
+            }
+            const {r, c} = nextExplosion;
             const criticalMass = getCriticalMass(r, c);
             const cell = newGrid[r][c];
 
