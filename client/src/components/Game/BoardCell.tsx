@@ -315,12 +315,28 @@ const BoardCell: React.FC<BoardCellProps> = ({
               }}
             />
 
-            {/* 100 gray particles exploding in all directions from whole circle */}
+            {/* 200 colorful particles exploding in all directions from whole circle */}
             {Array.from({ length: 200 }).map((_, i) => {
               const angle = (i * 360) / 100 + Math.random() * 5; // Even distribution with slight randomness
               const distance = 50 + Math.random() * 210; // Much farther spread
               const size = 2 + Math.random() * 7;
-              const grayShade = 100 + Math.random() * 100; // Different shades of gray
+              
+              // Get player's base color and create variations
+              const playerColor = PLAYER_COLORS[cell.player!];
+              const colorMatch = playerColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+              let r = 255, g = 255, b = 255; // Default to white if parse fails
+              
+              if (colorMatch) {
+                r = parseInt(colorMatch[1]);
+                g = parseInt(colorMatch[2]);
+                b = parseInt(colorMatch[3]);
+                
+                // Create color variations - lighter and darker shades of player color
+                const variation = (Math.random() - 0.5) * 0.6; // -0.3 to 0.3
+                r = Math.max(0, Math.min(255, Math.round(r + r * variation)));
+                g = Math.max(0, Math.min(255, Math.round(g + g * variation)));
+                b = Math.max(0, Math.min(255, Math.round(b + b * variation)));
+              }
 
               // Start from edge of circle, not center
               const startRadius = 30; // Start from edge of HQ base
@@ -356,7 +372,7 @@ const BoardCell: React.FC<BoardCellProps> = ({
                   style={{
                     width: size,
                     height: size,
-                    backgroundColor: `rgb(${grayShade}, ${grayShade}, ${grayShade})`,
+                    backgroundColor: `rgb(${r}, ${g}, ${b})`,
                     left: '50%',
                     top: '50%'
                   }}
