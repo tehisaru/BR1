@@ -25,8 +25,8 @@ const TutorialScreen: React.FC<TutorialScreenProps> = ({ mode, onBack }) => {
               <h2 className="text-lg font-semibold mb-2" style={typewriterFont}>How to Play</h2>
               <ul className="list-disc pl-6 space-y-1" style={typewriterFont}>
                 <li>Win by being the only player with dots remaining</li>
+                <li>Click empty cells or your own colored cells to add dots</li>
                 <li>When cells get too full, they explode and spread to neighbors, creating chain reactions</li>
-                <li>Capture enemy dots by exploding next to them</li>
                 
               </ul>
             </section>
