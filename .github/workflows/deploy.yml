@@ -39,8 +39,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # The path is now corrected to point to the root 'dist' folder.
-          path: ./dist
+          # This path is now correct again
+          path: ./client/dist
 
   deploy:
     environment:
