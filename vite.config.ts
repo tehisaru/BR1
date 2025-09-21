@@ -31,9 +31,10 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "shared"),
     },
   },
-  root: path.resolve(__dirname, "client"),
+  // The 'root' property has been removed, as your index.html is in the project root.
   build: {
-    outDir: "dist",
+    // The output directory is now relative to the project root.
+    outDir: "dist", 
     emptyOutDir: true,
   },
   assetsInclude: ["**/*.gltf", "**/*.glb", "**/*.mp3", "**/*.ogg", "**/*.wav"],
