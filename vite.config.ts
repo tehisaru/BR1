@@ -32,9 +32,9 @@ export default defineConfig({
     },
   },
   root: path.resolve(__dirname, "client"),
-  build: {
-    outDir: "dist",
-    emptyOutDir: true,
-  },
+build: {
+  outDir: "../docs",
+  emptyOutDir: true,
+},
   assetsInclude: ["**/*.gltf", "**/*.glb", "**/*.mp3", "**/*.ogg", "**/*.wav"],
 });
